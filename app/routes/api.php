@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,5 +14,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('/url-shortner')->group(function () {
+    Route::get('/{code}', '\App\Http\Controllers\UrlShortnerController@fetch');
+    Route::put('/{code}', '\App\Http\Controllers\UrlShortnerController@update');
+    Route::delete('/{code}', '\App\Http\Controllers\UrlShortnerController@delete');
     Route::post('/', '\App\Http\Controllers\UrlShortnerController@create');
 });
