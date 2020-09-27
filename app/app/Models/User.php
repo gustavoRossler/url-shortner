@@ -5,13 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class UrlShort extends Model
+class User extends Model
 {
     use HasFactory;
 
-    protected $table = 'url_short';
+    protected $table = 'users';
 
     protected $fillable = [
-        'original', 'short', 'code', 'clicks', 'user_id'
+        'name', 'email'
     ];
+
 }

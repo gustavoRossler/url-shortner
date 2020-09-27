@@ -12,6 +12,7 @@ class UrlShortnerTest extends TestCase
 
     protected $url;
     protected $urlUpdated;
+    protected $urlData;
 
     public function setUp(): void
     {
@@ -20,6 +21,19 @@ class UrlShortnerTest extends TestCase
         $this->urlUpdated = 'https://www.reuters.com/article/health-coronavirus-johnson-johnson-vacci/johnson-johnson-covid-19-vaccine-produces-strong-immune-response-in-early-trial-idUSKCN26G2YC';
         $this->withoutExceptionHandling();
         $this->artisan('migrate');
+
+        $this->urlData = [
+            'original' => $this->url,
+            'code' => 123,
+            'short' => env('APP_URL') . '/' . 123,
+            'clicks' => 0,
+            'user_id' => 1,
+        ];
+
+        $this->userData = [
+            'name' => 'User Test',
+            'email' => 'user.test@server.com'
+        ];
     }
 
     /**
@@ -29,8 +43,11 @@ class UrlShortnerTest extends TestCase
      */
     public function test_can_create()
     {
+        $user = \App\Models\User::create($this->userData);
+
         $response = $this->post('/api/url-shortner', [
-            'url' => $this->url
+            'url' => $this->url,
+            'user_id' => $user->id,
         ]);
         $response->assertStatus(201);
         $response->assertJsonStructure([
@@ -45,6 +62,7 @@ class UrlShortnerTest extends TestCase
                 'id',
             ]
         ]);
+        $response->assertSeeText(addcslashes($this->url, '/'));
     }
 
     /**
@@ -54,14 +72,24 @@ class UrlShortnerTest extends TestCase
      */
     public function test_can_fetch()
     {
-        $urlShort = \App\Models\UrlShort::create([
-            'original' => $this->url,
-            'code' => 123,
-            'short' => env('APP_URL') . '/' . 123,
-            'clicks' => 0,
-        ]);
+        $urlShort = $this->createData();
 
         $response = $this->get('/api/url-shortner/' . $urlShort->code);
+        $response->assertStatus(200);
+        $response->assertSeeText(addcslashes($urlShort->short, '/'));
+        $response->assertSeeText(addcslashes($urlShort->original, '/'));
+    }
+
+    /**
+     * Test if can fetch a list by user
+     *
+     * @return void
+     */
+    public function test_can_fetch_by_user()
+    {
+        $urlShort = $this->createData();
+
+        $response = $this->get('/api/url-shortner/by-user/' . $urlShort->user_id);
         $response->assertStatus(200);
         $response->assertSeeText(addcslashes($urlShort->short, '/'));
         $response->assertSeeText(addcslashes($urlShort->original, '/'));
@@ -74,12 +102,7 @@ class UrlShortnerTest extends TestCase
      */
     public function test_can_update()
     {
-        $urlShort = \App\Models\UrlShort::create([
-            'original' => $this->url,
-            'code' => 123,
-            'short' => env('APP_URL') . '/' . 123,
-            'clicks' => 0,
-        ]);
+        $urlShort = $this->createData();
 
         $response = $this->put('/api/url-shortner/' . $urlShort->code, [
             'url' => $this->urlUpdated,
@@ -98,12 +121,7 @@ class UrlShortnerTest extends TestCase
      */
     public function test_can_delete()
     {
-        $urlShort = \App\Models\UrlShort::create([
-            'original' => $this->url,
-            'code' => 123,
-            'short' => env('APP_URL') . '/' . 123,
-            'clicks' => 0,
-        ]);
+        $urlShort = $this->createData();
 
         $response = $this->delete('/api/url-shortner/' . $urlShort->code);
         $response->assertStatus(200);
@@ -111,5 +129,12 @@ class UrlShortnerTest extends TestCase
             'success' => true,
             'deleted' => 1
         ]);
+    }
+
+    public function createData()
+    {
+        \App\Models\User::create($this->userData);
+        $urlShort = \App\Models\UrlShort::create($this->urlData);
+        return $urlShort;
     }
 }

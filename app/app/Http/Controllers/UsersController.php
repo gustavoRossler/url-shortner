@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 
-class UrlShortnerController extends Controller
+class UsersController extends Controller
 {
 
     public function create(Request $request)
@@ -13,8 +13,8 @@ class UrlShortnerController extends Controller
             $validator = \Validator::make(
                 $request->all(),
                 [
-                    'url' => 'required|string',
-                    'user_id' => 'required|integer|exists:users,id'
+                    'name' => 'required|string',
+                    'email' => 'required|email|unique:users',
                 ]
             );
 
@@ -25,19 +25,11 @@ class UrlShortnerController extends Controller
                 ], 400);
             }
 
-            $code = uniqid();
-
-            $urlShort = \App\Models\UrlShort::create([
-                'original' => $request->url,
-                'code' => $code,
-                'short' => env('APP_URL') . '/' . $code,
-                'clicks' => 0,
-                'user_id' => $request->user_id,
-            ]);
+            $user = \App\Models\User::create($request->only('name', 'email'));
 
             return response()->json([
                 'success' => true,
-                'url' => $urlShort,
+                'user' => $user,
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -47,16 +39,32 @@ class UrlShortnerController extends Controller
         }
     }
 
-    public function fetch($code)
+    public function fetchAll()
     {
         try {
-            $urlShort = \App\Models\UrlShort::where('code', $code)->first();
-            if (!$urlShort) {
-                throw new \Exception('The informed URL was not found');
+            $users = \App\Models\User::all();
+            return response()->json([
+                'success' => true,
+                'users' => $users,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    public function fetch($id)
+    {
+        try {
+            $user = \App\Models\User::where('id', $id)->first();
+            if (!$user) {
+                throw new \Exception('The user was not found');
             }
             return response()->json([
                 'success' => true,
-                'url' => $urlShort,
+                'user' => $user,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -66,34 +74,19 @@ class UrlShortnerController extends Controller
         }
     }
 
-    public function fetchByUser($userId)
+    public function update(Request $request, $id)
     {
         try {
-            $list = \App\Models\UrlShort::where('user_id', $userId)->get();
-            return response()->json([
-                'success' => true,
-                'urlList' => $list,
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 400);
-        }
-    }
-
-    public function update(Request $request, $code)
-    {
-        try {
-            $urlShort = \App\Models\UrlShort::where('code', $code)->first();
-            if (!$urlShort) {
-                throw new \Exception('The informed URL was not found');
+            $user = \App\Models\User::find($id);
+            if (!$user) {
+                throw new \Exception('The user was not found');
             }
 
             $validator = \Validator::make(
                 $request->all(),
                 [
-                    'url' => 'required|string',
+                    'name' => 'required|string',
+                    'email' => 'required|email|unique:users,email,' . $user->id,
                 ]
             );
 
@@ -104,9 +97,7 @@ class UrlShortnerController extends Controller
                 ], 400);
             }
 
-            $updated = \App\Models\UrlShort::where('code', $code)->update([
-                'original' => $request->url
-            ]);
+            $updated = \App\Models\User::where('id', $id)->update($request->only('name', 'email'));
 
             return response()->json([
                 'success' => true,
@@ -120,15 +111,15 @@ class UrlShortnerController extends Controller
         }
     }
 
-    public function delete($code)
+    public function delete($id)
     {
         try {
-            $urlShort = \App\Models\UrlShort::where('code', $code)->first();
-            if (!$urlShort) {
-                throw new \Exception('The informed URL was not found');
+            $user = \App\Models\User::find($id);
+            if (!$user) {
+                throw new \Exception('The user was not found');
             }
 
-            $deleted = \App\Models\UrlShort::where('code', $code)->delete();
+            $deleted = \App\Models\User::where('id', $id)->delete();
 
             return response()->json([
                 'success' => true,
